@@ -1,44 +1,98 @@
 // const { Gitgraph } = require("@gitgraph/react");
 import React, { useEffect, useState } from "react";
+import axios from 'axios'
 import { OverlayTrigger, Button, Popover } from "react-bootstrap";
-import ChainData from '../data/chaindata.json';
 
 export default function ForkGitGraph() {
 
-    const [chaindata, setChaindata] = useState(ChainData);
-    const [data, setData] = useState([]);
-    const [count, setCount] = useState(0);
+    // const [chaindata, setChaindata] = useState([]);
+    const [Blocks, setBlocks] = useState({})
+    // const [data, setData] = useState([]);
+    // const [count, setCount] = useState(0);
     const [forkCount, setForkCount] = useState(0);
 
     useEffect(() => {
         updation();
     }, []);
 
-    useEffect(() => {
-        var d = [...data];
-        if(chaindata[count] !== null) {
-            d.unshift(chaindata[count]);    // unshift() function inserts new element at the start
-            
-            if(chaindata[count-1] && chaindata[count-1].number === chaindata[count].number) {
-                    setForkCount(forkCount+1)
-            }
-        }
-        setData(d);
-    }, [count]);
+    // useEffect(() => {
+    //     console.log("HAHA",Blocks)
+    // }, [Blocks])
 
     async function sleep() {
-        console.log("sleep start");
-        await new Promise(resolve => setTimeout(resolve, 2000));
-        console.log("sleep done");
+        // console.log("sleep start");
+        await new Promise(resolve => setTimeout(resolve, 1000));
+        // console.log("sleep done");
+    }
+
+    async function getLatestBlocks() {
+        await axios.post(`http://localhost:8080/v1/graphql`, {
+            query: `
+            {
+                headentry(limit: 100, order_by: {block_number: desc}) {
+                  typ
+                  block_number
+                  block {
+                    created_at
+                    difficulty
+                    gas_limit
+                    total_difficulty
+                    gas_used
+                    hash
+                    miner
+                    number
+                    parent_hash
+                    state_root
+                    timestamp
+                    transactions_count
+                    transactions_root
+                    uncles_count
+                  }
+                  headevent {
+                    typ
+                  }
+                }
+              }`,
+          })
+          .then(async (response) => {
+            let arr = response.data.data.headentry
+            // console.log(arr)
+            var blocks = {}
+            let forks = forkCount
+            for (var i=0; i<arr.length; i++){
+                    if(arr[i].block){
+                        arr[i].block.typ = arr[i].headevent.typ
+                    
+                    if(blocks[arr[i].block_number]===undefined && arr[i].typ==='add'){
+                        var obj = {}
+                        obj.number = arr[i].block_number
+                        obj.blocks= []
+                        obj.removedBlocks = []
+                        obj.blocks.push(arr[i].block)
+                        blocks[arr[i].block_number] = obj
+                    }
+                    else if(blocks[arr[i].block_number]!==undefined && arr[i].typ==='add'){
+                        blocks[arr[i].block_number].blocks.push(arr[i].block)
+                        forks+=1
+                    }
+                    else if(blocks[arr[i].block_number]!==undefined && arr[i].typ==='del'){
+                        blocks[arr[i].block_number].removedBlocks.push(arr[i].block)
+                    }
+                }
+            }
+            setForkCount(forks)
+
+            setBlocks(blocks)
+          })
+          await sleep()
+          await getLatestBlocks()
     }
 
     const updation = async () => {
-        for (let i = 0; i < chaindata.length; i++) {
-            setCount(i);
-            await sleep();
-            
-        }
+        await getLatestBlocks()
+        
     }
+    
 
     const popover = (block) => {
         return (
@@ -50,13 +104,13 @@ export default function ForkGitGraph() {
                         <strong>Hash : </strong>{block.hash}<br></br>
                     </li>
                     <li>
-                        <strong>Parent Hash : </strong>{block.parentHash}
+                        <strong>Parent Hash : </strong>{block.parent_hash}
                     </li>
                     <li>
                         <strong>Miner : </strong>{block.miner}
                     </li>
                     <li>
-                        <strong>Total Difficulty : </strong>{block.totalDifficulty}
+                        <strong>Total Difficulty : </strong>{block.total_difficulty}
                     </li>
                 </ul>
             </Popover.Body>
@@ -64,42 +118,95 @@ export default function ForkGitGraph() {
         )
     }
 
-    const renderFork = (key) => {
-        if( data[key-1] && data[key-1].number === data[key].number) {
-            return (
-                <span>
-                    <OverlayTrigger placement="right" overlay={popover(data[key])}>
-                        <Button className="m-2" variant="secondary">
-                            <span>{data[key].hash.substring(0,10)}...</span><br></br>
-                            <span>{data[key].parentHash.substring(0,10)}...</span>
-                        </Button>
-                    </OverlayTrigger>
-                </span>
-            )
+    const isCanonical = (blockHash, removedBlocks) =>{
+        // console.log(removedBlocks)
+
+        if(removedBlocks.length===0){
+            return true
         }
-        else
+        for(var i=0; i<removedBlocks.length; i++){
+            if(removedBlocks[i].hash===blockHash){
+                return false
+            }
+        }
+        return true
+    }
+
+    const isFork = (block) =>{
+        console.log(block.typ)
+        if(block.typ==='fork'){
+            return true
+        }
+        else{
+            return false
+        }
+    }
+
+    const getBorderColor = (block, removedBlocks) =>{
+        if(isFork(block)){
+            return 'yellow'
+        }else{
+            if(isCanonical(block.hash, removedBlocks)){
+                return 'green'
+            }
+            else{
+                return 'black'
+            }
+        }
+    }
+
+    const renderFork = (block) => {
+        if(block.blocks.length>1){
+            return(
+                <>
+                    {/* <b>Fork</b> <br/> */}
+                    {block.blocks.map((block1) => {
+                        return (
+                            <>
+                            <OverlayTrigger trigger="click" placement="right" overlay={popover(block1)}>
+                                    <Button className="m-2" variant="secondary" 
+                                    style={{
+                                        // height:'200px', 
+                                        border: `${getBorderColor(block1, block.removedBlocks)} solid 5px`
+                                    }}>
+                                        <span>{block1.number}</span><br></br>
+                                        {block1.hash===undefined? '':<span>{block1.hash.substring(0,20)}...</span>}<br></br>
+                                    </Button>
+                            </OverlayTrigger>
+                            </> 
+                        )
+                    })}
+                <br/>
+                </>)
+            }
+        
+        else{
             return (
-                <span>
-                    <br></br>
-                    <span>#{data[key].number}</span>
-                    <span>
-                    <OverlayTrigger placement="right" overlay={popover(data[key])}>
-                        <Button className="m-2" variant="secondary">
-                            <span>{data[key].hash.substring(0,10)}...</span><br></br>
-                            <span>{data[key].parentHash.substring(0,10)}...</span>
+                <>
+                <OverlayTrigger trigger="click" placement="right" overlay={popover(block.blocks[0])}>
+                        <Button className="m-2" variant="secondary" 
+                        style={{
+                            width:'400px', 
+                            border: `${getBorderColor(block.blocks[0], block.removedBlocks)} solid 5px`
+                        }}>
+                            <span>{block.number}</span><br></br>
+                            {block.blocks[0].hash===undefined? '':<span>{block.blocks[0].hash.substring(0,20)}...</span>}<br></br>
                         </Button>
-                    </OverlayTrigger>
-                    </span>
-                </span>
+                </OverlayTrigger>
+                <br/>
+                </> 
             )
+
+        }
     }
 
     const renderData = () => {
-        return data.map((block, key) => {
+        var blocks=Object.values(Blocks).reverse();  
+        return blocks.map((block, key) => {
             return (
                 <span>
                     {/* {console.log("Key: ", key, " Count: ", count)} */}
-                    {renderFork(key)}
+                    {renderFork(block)}
                 </span>
             )
         })
@@ -107,18 +214,24 @@ export default function ForkGitGraph() {
 
     return (
         <div>
-            
-            <div style={{display: 'flex'}}>
-                <div style={{display: 'flex', flexDirection: 'column', textAlign: 'center'}}>
-                    <h4>Blocks</h4>
-                    <h5>{count+1}</h5>
+            <center>
+                <div style={{marginTop:'100px'}}>
+                    <div style={{display: 'inline-block', flexDirection: 'column', textAlign: 'center'}}>
+                        <h4>Got Last Blocks</h4>
+                        <h5>{Object.values(Blocks).length}</h5>
+                    </div>
+                    <div style={{display: 'inline-block', flexDirection: 'column', marginLeft: '30px', textAlign: 'center'}}>
+                        <h4>Forks</h4>
+                        <h5>{forkCount}</h5>
+                    </div>
                 </div>
-                <div style={{display: 'flex', flexDirection: 'column', marginLeft: '30px', textAlign: 'center'}}>
-                    <h4>Forks</h4>
-                    <h5>{forkCount}</h5>
+            </center>
+
+            <center>
+                <div style={{marginTop:'100px'}}>
+                    {renderData()}
                 </div>
-            </div>
-            {renderData()}
+            </center>
         </div>
     );
 }
