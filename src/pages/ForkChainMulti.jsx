@@ -25,6 +25,7 @@ export default function ForkGitGraph() {
     useEffect(() => {
         document.addEventListener("keydown" ,_handlePauseKey, false)
         updation();
+        alert("You can press 's' to pause/resume the surveillance!")
     }, []);
 
     async function sleep() {
