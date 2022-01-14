@@ -7,13 +7,17 @@ import {
   useRoutes,
 } from "react-router-dom";
 
-import ForkChain from './pages/ForkChainMulti';
+import ForkChainMulti from './pages/ForkChainMulti';
+import ForkChainSingle from './pages/ForkChain'
 import Block from './pages/Block';
 
 const Routes = () => {
   let routes = useRoutes([
-    { path: "/", element: <ForkChain /> },
+    { path: "/", element: <ForkChainMulti /> },
+    { path: "/:offset", element: <ForkChainMulti /> },
     { path: "block/:blockHash", element: <Block /> },
+    { path: "node/:nodeid", element: <ForkChainSingle /> },
+    { path: "node/:nodeid/:offset", element: <ForkChainSingle /> },
     { path: "*", element: <>Page Not Found</> }
   ]);
   return routes;

@@ -1,4 +1,4 @@
-// const { Gitgraph } = require("@gitgraph/react");
+import { useParams } from 'react-router-dom'
 import React, { useEffect, useState } from "react";
 import axios from 'axios'
 import { OverlayTrigger, Button, Popover } from "react-bootstrap";
@@ -10,9 +10,15 @@ export default function ForkGitGraph() {
 
     const [Blocks, setBlocks] = useState({})
     const [forkCount, setForkCount] = useState(0);
+    const [offsetSetting, setOffsetSetting] = useState(0)
+
+    var { offset } = useParams()
+    if(offset===undefined || offset<0){
+        offset=0
+    }
+
 
     const _handlePauseKey = event => {
-        console.log(event);
         if(event.key==='s'){
             pause = !pause
             if(pause){
@@ -25,7 +31,7 @@ export default function ForkGitGraph() {
     useEffect(() => {
         document.addEventListener("keydown" ,_handlePauseKey, false)
         updation();
-        alert("You can press 's' to pause/resume the surveillance!")
+        // alert("You can press 's' to pause/resume the surveillance!")
     }, []);
 
     async function sleep() {
@@ -48,7 +54,7 @@ export default function ForkGitGraph() {
             await axios.post(`http://localhost:8080/v1/graphql`, {
                 query: `
                 {
-                    headentry(limit: 1000, order_by: {block_number: desc}) {
+                    headentry(limit: 1000, offset:${offset}, order_by: {block_number: desc}) {
                     typ
                     block_number
                     block {
@@ -255,6 +261,34 @@ export default function ForkGitGraph() {
                     <div style={{display: 'inline-block', flexDirection: 'column', marginLeft: '30px', textAlign: 'center', marginRight:'300px'}}>
                         <h4>Forks</h4>
                         <h5>{forkCount}</h5>
+                    </div>
+                    <br/><br/>
+
+                    <div style={{display: 'inline-block', flexDirection: 'column', marginLeft: '30px', textAlign: 'center', marginRight:'300px'}}>
+                        
+                        <input
+                            type='number'
+                            onChange={(e)=>{setOffsetSetting(e.target.value)}}
+                            style={{background:'transparent',
+                                    borderColor:'#737373',
+                                    borderStyle:'solid',
+                                    borderWidth:'1px',
+                                    height:'50px',
+                                    width:'300px',
+                                    borderRadius:'10px',
+                                    paddingLeft:'15px', 
+                                    paddingRight:'15px',
+                                }}
+                                placeholder='Offset'
+                            >
+                            </input>
+                        
+                        <br/><br/>
+                        <a href={`/${parseInt(offset)+parseInt(offsetSetting)}`}><button>Add Offset</button></a>
+
+                       
+                        &nbsp;&nbsp;&nbsp;
+                        <a href={`/${parseInt(offset)-parseInt(offsetSetting)}`}><button>Subtract Offset</button></a>
                     </div>
                 </div>
                 <br/>

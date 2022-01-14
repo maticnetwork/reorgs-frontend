@@ -105,7 +105,10 @@ export default function Block() {
             <>
             {nodes.map(node=>(
                 <>
-                {node} <br/>
+                <a href={"/node/"+node} target='_blank' rel="noreferrer">
+                {node} 
+                </a>
+                <br/>
                 </>
             ))}
             </>
