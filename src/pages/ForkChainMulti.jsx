@@ -1,14 +1,12 @@
+import { useParams } from 'react-router-dom'
 import React, { useEffect, useState } from "react";
 import axios from 'axios'
-import { useParams } from 'react-router-dom'
 import { OverlayTrigger, Button, Popover } from "react-bootstrap";
 
 var canons = []
-var nodeAdditions = []
 var pause = false
 
 export default function ForkGitGraph() {
-
 
     const [Blocks, setBlocks] = useState({})
     const [forkCount, setForkCount] = useState(0);
@@ -18,10 +16,9 @@ export default function ForkGitGraph() {
     if(offset===undefined || offset<0){
         offset=0
     }
-    const { nodeid } = useParams()
+
 
     const _handlePauseKey = event => {
-        console.log(event);
         if(event.key==='s'){
             pause = !pause
             if(pause){
@@ -41,85 +38,86 @@ export default function ForkGitGraph() {
         await new Promise(resolve => setTimeout(resolve, 1000));
     }
 
+    function compare( a, b ) {
+        // console.log(a)
+        if ( a.total_difficulty > b.total_difficulty ){
+          return -1;
+        }
+        if ( a.total_difficulty < b.total_difficulty ){
+          return 1;
+        }
+        return 0;
+      }
+
     async function getLatestBlocks() {
         if(!pause){
             await axios.post(`http://localhost:8080/v1/graphql`, {
-            query: `
-            {
-                headentry( offset: ${offset}, where: {headevent: {node_id: {_eq: "${nodeid}"}}}, limit: 100, order_by: {block_number: desc}) {
-                  typ
-                  block_number
-                  block {
-                    created_at
-                    difficulty
-                    gas_limit
-                    total_difficulty
-                    gas_used
-                    hash
-                    miner
-                    number
-                    parent_hash
-                    state_root
-                    timestamp
-                    transactions_count
-                    transactions_root
-                    uncles_count
-                  }
-                  headevent {
+                query: `
+                {
+                    headentry(limit: 1000, offset:${offset}, order_by: {block_number: desc}) {
                     typ
-                  }
-                }
-              }`,
-          })
-          .then(async (response) => {
-            let arr = response.data.data.headentry
-            // console.log(arr)
-            var blocks = {}
-            let forks = forkCount
-            for (var i=0; i<arr.length; i++){
-                    if(arr[i].block){
-                        arr[i].block.typ = arr[i].headevent.typ
-                    
-                    if(blocks[arr[i].block_number]===undefined && arr[i].typ==='add'){
-                        var obj = {}
-                        obj.number = arr[i].block_number
-                        obj.blocks= []
-                        obj.removedBlocks = []
-                        obj.blocks.push(arr[i].block)
-                        blocks[arr[i].block_number] = obj
-
-                        if(arr[i].headevent.typ==='head'){
-                            nodeAdditions.push(arr[i].block.hash)
-                        }
-                    }                    
-                    else if(blocks[arr[i].block_number]!==undefined && arr[i].typ==='add'){
+                    block_number
+                    block {
+                        created_at
+                        difficulty
+                        gas_limit
+                        total_difficulty
+                        gas_used
+                        hash
+                        miner
+                        number
+                        parent_hash
+                        state_root
+                        timestamp
+                        transactions_count
+                        transactions_root
+                        uncles_count
+                    }
+                    headevent {
+                        typ
+                    }
+                    }
+                }`,
+            })
+            .then(async (response) => {
+                canons = []
+                let arr = response.data.data.headentry
+                // console.log(arr)
+                var blocks = {}
+                let forks = forkCount
+                for (var i=0; i<arr.length; i++){
+                        if(arr[i].block){
+                            arr[i].block.typ = arr[i].headevent.typ
                         
-                        var blockArr = blocks[arr[i].block_number].blocks
-                        var done = false
-
-                        for(var j = 0; j<blockArr.length; j++){
-                            if(arr[i].block.hash===blockArr[j].hash){
-                                done = true
-                                break
+                        if(blocks[arr[i].block_number]===undefined){
+                            var obj = {}
+                            obj.number = arr[i].block_number
+                            obj.blocks= []
+                            obj.blocks.push(arr[i].block)
+                            blocks[arr[i].block_number] = obj
+                        }
+                        else if(blocks[arr[i].block_number]!==undefined){
+                            // console.log(blocks)
+                            var blockArr = blocks[arr[i].block_number].blocks
+                            var done = false
+                            // console.log(blockArr)
+                            for(var j = 0; j<blockArr.length; j++){
+                                if(arr[i].block.hash===blockArr[j].hash){
+                                    done = true
+                                    break
+                                }
+                            }
+                            if(done!==true){
+                                blocks[arr[i].block_number].blocks.push(arr[i].block)
+                                blocks[arr[i].block_number].blocks.sort( compare );
+                                // console.log(blocks[arr[i].block_number].blocks)
+                                forks+=1
                             }
                         }
-                        if(done!==true){
-                            blocks[arr[i].block_number].blocks.push(arr[i].block)
-                            blocks[arr[i].block_number].blocks.sort( compare );
-                            forks+=1
-                        }
-
-                        if(arr[i].headevent.typ==='head'){
-                            nodeAdditions.push(arr[i].block.hash)
-                        }
-                    }
-                    else if(blocks[arr[i].block_number]!==undefined && arr[i].typ==='del'){
-                        blocks[arr[i].block_number].removedBlocks.push(arr[i].block)
                     }
                 }
-            }
 
-            var arr2 = Object.keys(blocks).reverse()
+                var arr2 = Object.keys(blocks).reverse()
                 var last_parent = 0
                 for(i=0; i<arr2.length;i++){
                     if(i===0){
@@ -136,22 +134,16 @@ export default function ForkGitGraph() {
                             }
                         }
                     }
-            }
+                }
+                // console.log(canons)
+                setForkCount(forks)
 
-            setForkCount(forks)
-            setBlocks(blocks)
-          })
-        }
-        
-          await sleep()
-          await getLatestBlocks()
-    }
-
-    const updation = async () => {
+                setBlocks(blocks)
+            })
+        } 
+        await sleep()
         await getLatestBlocks()
-        
     }
-    
 
     const popover = (block) => {
         return (
@@ -177,24 +169,14 @@ export default function ForkGitGraph() {
         )
     }
 
-    function compare( a, b ) {
-        // console.log(a)
-        if ( a.total_difficulty > b.total_difficulty ){
-          return -1;
-        }
-        if ( a.total_difficulty < b.total_difficulty ){
-          return 1;
-        }
-        return 0;
-      }
-
+    const updation = async () => {
+        await getLatestBlocks()
+        
+    }
+    
     const getBorderColor = (blockHash) =>{
         var index = canons.indexOf(blockHash)
         if(index===-1){
-            var index2 = nodeAdditions.indexOf(blockHash)
-            if(index2===-1){
-                return 'yellow'
-            }
             return 'black'
         }
         return 'green'
@@ -257,7 +239,8 @@ export default function ForkGitGraph() {
     }
 
     const renderData = () => {
-        var blocks=Object.values(Blocks).reverse();  
+        var blocks=Object.values(Blocks).reverse(); 
+        // console.log(Blocks) 
         return blocks.map((block, key) => {
             return (
                 <span>
@@ -270,9 +253,7 @@ export default function ForkGitGraph() {
     return (
         <div style={{backgroundColor:'lightblue', paddingTop:'100px', paddingBottom:'100px'}}>
             <center>
-                
                 <div>
-                    <u><h1 style={{marginRight:'300px'}}>Single Node Visualisation : {nodeid}</h1></u><br/><br/>
                     <div style={{display: 'inline-block', flexDirection: 'column', textAlign: 'center', marginRight:'300px'}}>
                         <h4>Got Last Blocks</h4>
                         <h5>{Object.values(Blocks).length}</h5>
@@ -303,11 +284,11 @@ export default function ForkGitGraph() {
                             </input>
                         
                         <br/><br/>
-                        <a href={`/node/${nodeid}/${parseInt(offset)+parseInt(offsetSetting)}`}><button>Add Offset</button></a>
+                        <a href={`/${parseInt(offset)+parseInt(offsetSetting)}`}><button>Add Offset</button></a>
 
                        
                         &nbsp;&nbsp;&nbsp;
-                        <a href={`/node/${nodeid}/${parseInt(offset)-parseInt(offsetSetting)}`}><button>Subtract Offset</button></a>
+                        <a href={`/${parseInt(offset)-parseInt(offsetSetting)}`}><button>Subtract Offset</button></a>
                     </div>
                 </div>
                 <br/>
