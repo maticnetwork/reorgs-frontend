@@ -74,6 +74,8 @@ export default function ForkGitGraph() {
           .then(async (response) => {
             let arr = response.data.data.headentry
             // console.log(arr)
+            canons = []
+            nodeAdditions = []
             var blocks = {}
             let forks = forkCount
             for (var i=0; i<arr.length; i++){
