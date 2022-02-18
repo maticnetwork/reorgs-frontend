@@ -9,14 +9,23 @@ export default function Block() {
     const [ReorgNodes, setReorgNodes] = useState([])
     const { blockHash } = useParams()
 
+    const { apiKey } = useParams()
+
     useEffect(() => {
         fetchData()
     }, [])
 
+    let config = {
+        headers: {
+            'x-hasura-admin-secret': apiKey,
+            'content-type': 'application/json'
+        }
+    }
+
     const fetchData = async() =>{
         var headNodes = []
         var reorgNodes = []
-        await axios.post(`http://localhost:8080/v1/graphql`, {
+        await axios.post(`http://ethstats-backend-alb-145109141.us-west-2.elb.amazonaws.com:8080/v1/graphql`, {
             query: `
             query MyQuery {
                 headentry(where: {block_hash: {_eq: "${blockHash}"}, headevent: {typ: {_eq: "reorg"}}, typ: {_eq: "add"}}) {
@@ -44,7 +53,7 @@ export default function Block() {
                 }
               }
               `,
-          })
+          },config)
           .then(async (response) => {
               var res = response.data.data.headentry
               for(var i=0; i<res.length; i++){
@@ -54,7 +63,7 @@ export default function Block() {
               console.log('REORG NODES : ', reorgNodes)
               setReorgNodes(reorgNodes)
 
-              await axios.post(`http://localhost:8080/v1/graphql`, {
+              await axios.post(`http://ethstats-backend-alb-145109141.us-west-2.elb.amazonaws.com:8080/v1/graphql`, {
                 query: `
                 query MyQuery {
                     headentry(where: {block_hash: {_eq: "${blockHash}"}, typ: {_eq: "add"}, headevent: {typ: {_eq: "head"}}}) {
@@ -82,7 +91,7 @@ export default function Block() {
                     }
                 }
                 `,
-            })
+            }, config)
             .then(async (response2) => {
                 var res2 = response2.data.data.headentry
                 var block = res2[0].block
@@ -105,7 +114,7 @@ export default function Block() {
             <>
             {nodes.map(node=>(
                 <>
-                <a href={"/node/"+node} target='_blank' rel="noreferrer">
+                <a href={"/node/"+node+"/"+apiKey} target='_blank' rel="noreferrer">
                 {node} 
                 </a>
                 <br/>

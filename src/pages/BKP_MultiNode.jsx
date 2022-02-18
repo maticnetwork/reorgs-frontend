@@ -17,7 +17,7 @@ export default function MultiNode() {
     }
 
     async function getLatestBlocks() {
-        await axios.post(`http://localhost:8080/v1/graphql`, {
+        await axios.post(`http://ethstats-backend-alb-145109141.us-west-2.elb.amazonaws.com:8080/v1/graphql`, {
             query: `
             {
                 headentry(limit: 100, distinct_on: block_hash) {
