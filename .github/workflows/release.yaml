@@ -23,11 +23,6 @@ jobs:
       - name: INSTALL
         run: npm ci
       
-      - name: Load env
-        uses: c-py/action-dotenv-to-setenv@v2
-        with:
-          env-file: .env.production
-
       - name: BUILD
         run: npm run build
 
