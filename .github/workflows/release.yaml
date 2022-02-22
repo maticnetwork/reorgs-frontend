@@ -24,6 +24,8 @@ jobs:
         run: npm ci
       
       - name: BUILD
+        env:
+          CI: ""
         run: npm run build
 
       - name: Uploading to s3 bucket
