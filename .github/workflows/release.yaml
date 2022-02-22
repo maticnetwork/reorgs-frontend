@@ -4,7 +4,6 @@ on:
   push:
     branches:
       - main
-      - vcastellm/pos-215-reorgs-frontend-deployment
         
   workflow_dispatch:
   
