@@ -12,6 +12,8 @@ export default function ForkGitGraph() {
     const [forkCount, setForkCount] = useState(0);
     const [offsetSetting, setOffsetSetting] = useState(0)
 
+    const { apiKey } = useParams()
+
     var { offset } = useParams()
     if(offset===undefined || offset<0){
         offset=0
@@ -48,10 +50,17 @@ export default function ForkGitGraph() {
         }
         return 0;
       }
+    
+    let config = {
+        headers: {
+            'x-hasura-admin-secret': apiKey,
+            'content-type': 'application/json'
+        }
+    }
 
     async function getLatestBlocks() {
         if(!pause){
-            await axios.post(`http://localhost:8080/v1/graphql`, {
+            await axios.post(`http://ethstats-backend-alb-145109141.us-west-2.elb.amazonaws.com:8080/v1/graphql`, {
                 query: `
                 {
                     headentry(limit: 1000, offset:${offset}, order_by: {block_number: desc}) {
@@ -78,7 +87,7 @@ export default function ForkGitGraph() {
                     }
                     }
                 }`,
-            })
+            },config)
             .then(async (response) => {
                 canons = []
                 let arr = response.data.data.headentry
@@ -190,7 +199,7 @@ export default function ForkGitGraph() {
                     {block.blocks.map((block1) => {
                         return (
                             <>
-                                    <a href={"/block/"+block1.hash} target='_blank' rel="noreferrer">
+                                    <a href={"/block/"+block1.hash+"/"+apiKey} target='_blank' rel="noreferrer">
                                     <OverlayTrigger placement="right" overlay={popover(block1)}>
                                     <Button className="m-2" variant="secondary" 
                                     style={{
@@ -215,7 +224,7 @@ export default function ForkGitGraph() {
         else{
             return (
                 <>
-                        <a href={"/block/"+block.blocks[0].hash} target='_blank' rel="noreferrer">
+                        <a href={"/block/"+block.blocks[0].hash+"/"+apiKey} target='_blank' rel="noreferrer">
                         <OverlayTrigger placement="right" overlay={popover(block.blocks[0])}>
                         <Button className="m-2" variant="secondary" 
                         
@@ -284,11 +293,11 @@ export default function ForkGitGraph() {
                             </input>
                         
                         <br/><br/>
-                        <a href={`/${parseInt(offset)+parseInt(offsetSetting)}`}><button>Add Offset</button></a>
+                        <a href={`/${parseInt(offset)+parseInt(offsetSetting)}/${apiKey}`}><button>Add Offset</button></a>
 
                        
                         &nbsp;&nbsp;&nbsp;
-                        <a href={`/${parseInt(offset)-parseInt(offsetSetting)}`}><button>Subtract Offset</button></a>
+                        <a href={`/${parseInt(offset)-parseInt(offsetSetting)}/${apiKey}`}><button>Subtract Offset</button></a>
                     </div>
                 </div>
                 <br/>

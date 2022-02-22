@@ -14,10 +14,11 @@ import Block from './pages/Block';
 const Routes = () => {
   let routes = useRoutes([
     { path: "/", element: <ForkChainMulti /> },
-    { path: "/:offset", element: <ForkChainMulti /> },
-    { path: "block/:blockHash", element: <Block /> },
-    { path: "node/:nodeid", element: <ForkChainSingle /> },
-    { path: "node/:nodeid/:offset", element: <ForkChainSingle /> },
+    { path: "/:apiKey", element: <ForkChainMulti /> },
+    { path: "/:offset/:apiKey", element: <ForkChainMulti /> },
+    { path: "block/:blockHash/:apiKey", element: <Block /> },
+    { path: "node/:nodeid/:apiKey", element: <ForkChainSingle /> },
+    { path: "node/:nodeid/:offset/:apiKey", element: <ForkChainSingle /> },
     { path: "*", element: <>Page Not Found</> }
   ]);
   return routes;
