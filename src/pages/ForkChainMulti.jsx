@@ -60,7 +60,7 @@ export default function ForkGitGraph() {
 
     async function getLatestBlocks() {
         if(!pause){
-            await axios.post(`http://ethstats-backend-alb-145109141.us-west-2.elb.amazonaws.com:8080/v1/graphql`, {
+            await axios.post(`https://ethstats.polygon.technology:444/v1/graphql`, {
                 query: `
                 {
                     headentry(limit: 1000, offset:${offset}, order_by: {block_number: desc}) {

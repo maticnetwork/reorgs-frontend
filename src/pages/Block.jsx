@@ -25,7 +25,7 @@ export default function Block() {
     const fetchData = async() =>{
         var headNodes = []
         var reorgNodes = []
-        await axios.post(`http://ethstats-backend-alb-145109141.us-west-2.elb.amazonaws.com:8080/v1/graphql`, {
+        await axios.post(`https://ethstats.polygon.technology:444/v1/graphql`, {
             query: `
             query MyQuery {
                 headentry(where: {block_hash: {_eq: "${blockHash}"}, headevent: {typ: {_eq: "reorg"}}, typ: {_eq: "add"}}) {
@@ -63,7 +63,7 @@ export default function Block() {
               console.log('REORG NODES : ', reorgNodes)
               setReorgNodes(reorgNodes)
 
-              await axios.post(`http://ethstats-backend-alb-145109141.us-west-2.elb.amazonaws.com:8080/v1/graphql`, {
+              await axios.post(`https://ethstats.polygon.technology:444/v1/graphql`, {
                 query: `
                 query MyQuery {
                     headentry(where: {block_hash: {_eq: "${blockHash}"}, typ: {_eq: "add"}, headevent: {typ: {_eq: "head"}}}) {
