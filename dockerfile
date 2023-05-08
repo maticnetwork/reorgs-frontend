@@ -10,6 +10,8 @@ COPY package-lock.json ./
 RUN npm install --silent
 RUN npm install -g pm2
 
+ARG REACT_APP_BACKEND
+ENV REACT_APP_BACKEND = $REACT_APP_BACKEND
 
 COPY . ./
 

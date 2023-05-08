@@ -17,7 +17,7 @@ export default function MultiNode() {
     }
 
     async function getLatestBlocks() {
-        await axios.post(`https://ethstats.polygon.technology:444/v1/graphql`, {
+        await axios.post(`${process.env.REACT_APP_BACKEND}/v1/graphql`, {
             query: `
             {
                 headentry(limit: 100, distinct_on: block_hash) {
